@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake Smiley Survival</title>
+
+<style>
+body{
+    margin:0;
+    background:#111;
+    color:white;
+    font-family:Arial,sans-serif;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+    overflow:hidden;
+}
+
+#score{
+    position:absolute;
+    top:10px;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:22px;
+}
+
+#timer{
+    position:absolute;
+    top:40px;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:18px;
+}
+
+.game-container{
+    display:flex;
+    gap:20px;
+    align-items:center;
+}
+
+canvas{
+    background:#222;
+    border:2px solid #555;
+}
+
+.controller{
+    display:grid;
+    grid-template-columns:60px 60px 60px;
+    grid-template-rows:60px 60px 60px;
+    gap:5px;
+}
+
+.btn{
+    border:none;
+    border-radius:10px;
+    font-size:22px;
+    background:#333;
+    color:white;
+}
+
+.btn:active{
+    transform:scale(0.9);
+}
+
+.empty{
+    background:transparent;
+}
+</style>
+</head>
+
+<body>
+
+<div id="score">0 / 10</div>
+<div id="timer">Time Left: 60</div>
+
+<div class="game-container">
+
+<canvas id="game" width="400" height="400"></canvas>
+
+<div class="controller">
+    <div class="empty"></div>
+    <button class="btn" onclick="setDir('UP')">⬆️</button>
+    <div class="empty"></div>
+
+    <button class="btn" onclick="setDir('LEFT')">⬅️</button>
+    <div class="empty"></div>
+    <button class="btn" onclick="setDir('RIGHT')">➡️</button>
+
+    <div class="empty"></div>
+    <button class="btn" onclick="setDir('DOWN')">⬇️</button>
+    <div class="empty"></div>
+</div>
+
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const box = 20;
+const TARGET = 10;
+
+let snake;
+let direction;
+let food;
+
+let score;
+let speed;
+let game;
+
+let timer;
+let timeLeft;
+
+// number of smiley body segments
+let smileyCount;
+
+function resetGame(){
+
+    snake = [
+        {x:200, y:200}
+    ];
+
+    direction = "RIGHT";
+
+    food = randomFood();
+
+    score = 0;
+    smileyCount = 0;
+
+    speed = 180;
+
+    timeLeft = 60;
+
+    document.getElementById("score").innerHTML = "0 / 10";
+    document.getElementById("timer").innerHTML = "Time Left: 60";
+
+    clearInterval(game);
+    clearInterval(timer);
+
+    game = setInterval(draw, speed);
+
+    timer = setInterval(() => {
+
+        timeLeft--;
+
+        document.getElementById("timer").innerHTML =
+            "Time Left: " + timeLeft;
+
+        if(timeLeft <= 0){
+            gameOver();
+        }
+
+    },1000);
+}
+
+function randomFood(){
+    return{
+        x:Math.floor(Math.random()*20)*box,
+        y:Math.floor(Math.random()*20)*box
+    };
+}
+
+function setDir(dir){
+
+    if(dir==="LEFT" && direction!=="RIGHT")
+        direction="LEFT";
+
+    if(dir==="RIGHT" && direction!=="LEFT")
+        direction="RIGHT";
+
+    if(dir==="UP" && direction!=="DOWN")
+        direction="UP";
+
+    if(dir==="DOWN" && direction!=="UP")
+        direction="DOWN";
+}
+
+document.addEventListener("keydown",e=>{
+
+    if(e.key==="ArrowLeft") setDir("LEFT");
+    if(e.key==="ArrowRight") setDir("RIGHT");
+    if(e.key==="ArrowUp") setDir("UP");
+    if(e.key==="ArrowDown") setDir("DOWN");
+
+});
+
+function gameOver(){
+
+    clearInterval(game);
+    clearInterval(timer);
+
+    ctx.fillStyle="white";
+    ctx.font="28px Arial";
+    ctx.textAlign="center";
+
+    ctx.fillText("GAME OVER 😢",200,180);
+    ctx.font="18px Arial";
+    ctx.fillText("Restarting...",200,220);
+
+    setTimeout(()=>{
+        resetGame();
+    },2000);
+}
+
+function draw(){
+
+    ctx.clearRect(0,0,400,400);
+
+    // draw snake
+    for(let i=0;i<snake.length;i++){
+
+        if(i===0){
+
+            ctx.fillStyle="lime";
+            ctx.fillRect(
+                snake[i].x,
+                snake[i].y,
+                box,
+                box
+            );
+
+        }
+        else if(i<=smileyCount){
+
+            ctx.font="18px Arial";
+            ctx.fillText(
+                "😄",
+                snake[i].x+1,
+                snake[i].y+16
+            );
+
+        }
+        else{
+
+            ctx.fillStyle="green";
+            ctx.fillRect(
+                snake[i].x,
+                snake[i].y,
+                box,
+                box
+            );
+
+        }
+    }
+
+    // food
+    ctx.fillStyle="red";
+    ctx.fillRect(food.x,food.y,box,box);
+
+    let headX = snake[0].x;
+    let headY = snake[0].y;
+
+    if(direction==="LEFT") headX -= box;
+    if(direction==="RIGHT") headX += box;
+    if(direction==="UP") headY -= box;
+    if(direction==="DOWN") headY += box;
+
+    // pass through walls
+    if(headX < 0) headX = 380;
+    if(headX > 380) headX = 0;
+
+    if(headY < 0) headY = 380;
+    if(headY > 380) headY = 0;
+
+    let newHead = {
+        x:headX,
+        y:headY
+    };
+
+    // self collision
+    for(let i=0;i<snake.length;i++){
+
+        if(
+            newHead.x===snake[i].x &&
+            newHead.y===snake[i].y
+        ){
+            gameOver();
+            return;
+        }
+    }
+
+    // eat food
+    if(headX===food.x && headY===food.y){
+
+        score++;
+
+        document.getElementById("score").innerHTML =
+            score + " / 10";
+
+        food = randomFood();
+
+        // cycle complete
+        if(score >= TARGET){
+
+            smileyCount++;
+
+            score = 0;
+
+            document.getElementById("score").innerHTML =
+                "0 / 10";
+
+            timeLeft = 60;
+
+            // speed up
+            if(speed > 60){
+
+                speed -= 15;
+
+                clearInterval(game);
+                game = setInterval(draw,speed);
+            }
+        }
+
+    }
+    else{
+        snake.pop();
+    }
+
+    snake.unshift(newHead);
+}
+
+resetGame();
+</script>
+
+</body>
+</html>
